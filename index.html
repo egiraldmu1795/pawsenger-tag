@@ -20,9 +20,11 @@
   .btn{display:inline-block;background:var(--teal);color:#fff;font-weight:800;padding:13px 24px;border-radius:999px;border:0;cursor:pointer;font-size:16px}
   .btn:hover{background:var(--teal-d)}
   .btn.ghost{background:#fff;color:var(--teal-d);border:2px solid var(--teal)}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
   header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
   .logo{font-weight:800;font-size:20px;color:var(--ink)} .logo b{color:var(--teal-d)}
   .demo-banner{background:#fff7e6;border-bottom:1px solid #f6e3b8;color:#8a5a00;text-align:center;font-size:13px;font-weight:700;padding:7px}
+  .live-banner{background:#e7f8f5;border-bottom:1px solid #bfeae3;color:#0e8f83;text-align:center;font-size:13px;font-weight:700;padding:7px;display:none}
   /* hero */
   .hero{text-align:center;padding:46px 0 8px}
   .hero h1{font-size:clamp(28px,5.4vw,44px);font-weight:800;letter-spacing:-.02em;margin:.2em 0}
@@ -33,7 +35,8 @@
   .step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center}
   .step .n{width:34px;height:34px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;display:grid;place-items:center;margin:0 auto 8px}
   .gen{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}
-  .gen input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;margin:6px 0}
+  .gen input,.reg input,.reg textarea,#finderNote{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;margin:6px 0;background:#fff}
+  .reg .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   #qr{width:148px;height:148px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:12px}
   .price{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
   .tier{flex:1;min-width:200px;border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center;background:#fff}
@@ -45,21 +48,35 @@
   .pet-card{max-width:440px;margin:30px auto;text-align:center}
   .pet-photo{width:150px;height:150px;border-radius:50%;object-fit:cover;border:5px solid var(--teal);margin:0 auto 12px;background:#dff3f0;display:grid;place-items:center;font-size:54px}
   .found-badge{display:inline-block;background:#e7f8f5;color:var(--teal-d);font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;margin-bottom:6px}
-  @media(max-width:620px){.steps,.gen{grid-template-columns:1fr;display:block}.gen #qr{margin:14px auto 0}}
+  .lost-badge{display:inline-block;background:#fde8e8;color:#c0392b;font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;margin-left:6px}
+  @media(max-width:620px){.steps,.gen{grid-template-columns:1fr;display:block}.gen #qr{margin:14px auto 0}.reg .row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="demo-banner">DEMO, sample data, no real pet records. Go-live needs the data store + tags (see bottom).</div>
+<!-- config: anon + web3forms keys are PUBLISHABLE by design (RLS / static-site relay). Safe to commit.
+     Leave SUPABASE_ANON_KEY empty to keep the site in demo mode (in-memory SAMPLE); fill it (after the
+     migration runs) to flip the whole site to the live Supabase store. -->
+<script>
+window.PAWSENGER_CFG = {
+  SUPABASE_URL: "https://zkvyxlofetpwehfddyvl.supabase.co",
+  SUPABASE_ANON_KEY: "",                       // ← publishable anon key goes here to go live
+  WEB3FORMS_KEY: "682e61e2-ae02-4481-8c6d-78d22adc4194"
+};
+</script>
+
+<div class="demo-banner" id="demoBanner">DEMO, sample data. Connect the data store (anon key) to go live, registration + scan alerts are already wired.</div>
+<div class="live-banner" id="liveBanner">🟢 LIVE, connected to the Pawsenger data store.</div>
 
 <!-- ============ FOUND-PET VIEW (shown when ?tag=ID) ============ -->
 <main id="found"><div class="wrap"><div class="card pet-card">
-  <span class="found-badge">🐾 You found a Pawsenger pet</span>
+  <span class="found-badge">🐾 You found a Pawsenger pet</span><span class="lost-badge" id="lostBadge" style="display:none">LOST — please help</span>
   <div class="pet-photo" id="petPhoto">🐶</div>
   <h1 style="margin:.1em 0" id="petName">Buddy</h1>
   <p class="muted" id="petDesc">Friendly golden retriever. A little shy with strangers but loves treats.</p>
-  <p><strong>Thank you for helping get me home.</strong> Tap below and my owner is notified right away, their phone number stays private.</p>
-  <p><button class="btn" onclick="notifyOwner()">📨 Message the owner</button></p>
-  <p class="muted" id="notifyMsg" style="display:none">✅ The owner has been notified you found their pet (demo). In production this emails/SMSes them instantly via a contact relay, your message reaches them, their number is never shown.</p>
+  <p><strong>Thank you for helping get me home.</strong> Leave a note and tap below, my owner is notified right away, their phone number stays private.</p>
+  <textarea id="finderNote" rows="2" placeholder="Optional: where you found me / how I'm doing"></textarea>
+  <p><button class="btn" id="notifyBtn" onclick="notifyOwner()">📨 Message the owner</button></p>
+  <p class="muted" id="notifyMsg" style="display:none">✅ The owner has been notified you found their pet. Their contact stays private, your note reaches them through Pawsenger.</p>
   <p class="muted" style="font-size:13px">Tag ID: <span id="tagOut">—</span></p>
 </div></div></main>
 
@@ -95,6 +112,30 @@
     <p class="muted center" id="genLink" style="margin-top:14px;font-size:13px"></p>
   </div>
 
+  <!-- ====== REAL REGISTRATION (owner claims a physical tag) ====== -->
+  <div class="card reg" id="register">
+    <h2 style="margin:.2em 0">Register your tag</h2>
+    <p class="muted">Got a physical Pawsenger tag? Enter its ID + claim code (on the tag's card) to create your pet's live found-page. Your contact details stay private, finders never see them.</p>
+    <div class="row">
+      <div><label class="muted">Tag ID</label><input id="rTag" placeholder="e.g. BUDDY01" /></div>
+      <div><label class="muted">Claim code</label><input id="rCode" placeholder="from your tag card" /></div>
+    </div>
+    <div class="row">
+      <div><label class="muted">Pet name</label><input id="rName" placeholder="Buddy" /></div>
+      <div><label class="muted">Emoji (optional)</label><input id="rEmoji" placeholder="🐶" maxlength="4" /></div>
+    </div>
+    <label class="muted">Public note (shown to finder)</label>
+    <input id="rNote" placeholder="Friendly golden retriever, loves treats" />
+    <div class="row">
+      <div><label class="muted">Your name (private)</label><input id="rOwner" placeholder="Your name" /></div>
+      <div><label class="muted">Your email (private)</label><input id="rEmail" type="email" placeholder="you@email.com" /></div>
+    </div>
+    <label class="muted">Your phone (private, optional)</label>
+    <input id="rPhone" placeholder="+1 …" />
+    <p><button class="btn" id="regBtn" onclick="registerPet()">Register pet</button></p>
+    <p class="muted" id="regStatus" style="font-size:14px"></p>
+  </div>
+
   <h2 class="center" style="margin-top:34px">Simple pricing</h2>
   <div class="price">
     <div class="tier"><div class="amt">$14.99</div><strong>The Tag</strong><p class="muted">Durable QR tag, one-time. Includes a free profile.</p></div>
@@ -108,36 +149,122 @@
 <footer><div class="wrap">© <span id="yr"></span> Pawsenger · A scan-to-reunite pet tag · <a href="https://ridepawsenger.com" target="_blank" rel="noopener">ridepawsenger.com</a></div></footer>
 
 <script>
+  var CFG = window.PAWSENGER_CFG || {SUPABASE_URL:"",SUPABASE_ANON_KEY:"",WEB3FORMS_KEY:""};
+  var LIVE = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
   document.getElementById('yr').textContent = new Date().getFullYear();
-  // ponytail: sample tag store is inline; production reads this from Supabase by tag_id.
+  if (LIVE){ document.getElementById('demoBanner').style.display='none'; document.getElementById('liveBanner').style.display='block'; }
+
+  // ponytail: SAMPLE is the demo fallback; the live path reads public_pet_view from Supabase by tag_id.
   var SAMPLE = {
-    "BUDDY01": {name:"Buddy", emoji:"🐶", desc:"Friendly golden retriever. A little shy with strangers but loves treats."},
-    "MILO22":  {name:"Milo",  emoji:"🐱", desc:"Orange tabby cat, indoor, please don't chase, just message me!"}
+    "BUDDY01": {pet_name:"Buddy", emoji:"🐶", public_note:"Friendly golden retriever. A little shy with strangers but loves treats."},
+    "MILO22":  {pet_name:"Milo",  emoji:"🐱", public_note:"Orange tabby cat, indoor, please don't chase, just message me!"}
   };
   function qp(k){return new URLSearchParams(location.search).get(k);}
-  var tag = qp('tag');
-  if (tag){
-    var p = SAMPLE[tag.toUpperCase()] || {name:"this pet", emoji:"🐾", desc:"Help reunite this Pawsenger pet with their family."};
+  function sb(path){ return CFG.SUPABASE_URL + "/rest/v1/" + path; }
+  function sbHeaders(){ return {apikey:CFG.SUPABASE_ANON_KEY, Authorization:"Bearer "+CFG.SUPABASE_ANON_KEY, "Content-Type":"application/json"}; }
+
+  async function fetchPet(tagId){
+    if(!LIVE) return null;
+    try{
+      // get_pet is a security-definer RPC: returns ONLY safe columns for this one tag
+      // (no bulk enumeration, owner contact never leaves the server).
+      var r = await fetch(sb("rpc/get_pet"), {method:"POST", headers:sbHeaders(),
+        body:JSON.stringify({p_tag_id:tagId})});
+      if(!r.ok) return null;
+      var rows = await r.json();
+      return (Array.isArray(rows) ? rows[0] : rows) || null;
+    }catch(e){ return null; }
+  }
+  async function logScan(tagId, msg){
+    if(!LIVE) return;
+    try{ await fetch(sb("rpc/log_scan"), {method:"POST", headers:sbHeaders(),
+      body:JSON.stringify({p_tag_id:tagId, p_finder_message:msg||null})}); }catch(e){}
+  }
+
+  function renderPet(p, tag){
     document.getElementById('home').style.display='none';
     document.getElementById('found').style.display='block';
-    document.getElementById('petName').textContent = p.name;
-    document.getElementById('petDesc').textContent = p.desc;
-    document.getElementById('petPhoto').textContent = p.emoji;
-    document.getElementById('tagOut').textContent = tag.toUpperCase();
-    document.title = "Found " + p.name + ", Pawsenger Tag";
+    document.getElementById('petName').textContent = p.pet_name || "this pet";
+    document.getElementById('petDesc').textContent = p.public_note || "Help reunite this Pawsenger pet with their family.";
+    document.getElementById('petPhoto').textContent = p.emoji || "🐾";
+    document.getElementById('tagOut').textContent = tag;
+    if(p.lost_mode) document.getElementById('lostBadge').style.display='inline-block';
+    document.title = "Found " + (p.pet_name||"a pet") + ", Pawsenger Tag";
   }
-  function notifyOwner(){ document.getElementById('notifyMsg').style.display='block'; }
+
+  async function initFound(tag){
+    var T = tag.toUpperCase();
+    var p = await fetchPet(T);
+    if(!p){
+      if(LIVE){ // real but unregistered tag — be honest, don't show demo data
+        renderPet({pet_name:"This tag isn't registered yet", emoji:"🏷️",
+          public_note:"If this is your pet's tag, register it below at Pawsenger so finders can reach you."}, T);
+      } else {
+        renderPet(SAMPLE[T] || {pet_name:"this pet", emoji:"🐾",
+          public_note:"Help reunite this Pawsenger pet with their family."}, T);
+      }
+      logScan(T, null);
+      return;
+    }
+    renderPet(p, T);
+    logScan(T, null);  // log the scan (fire-and-forget)
+  }
+
+  async function notifyOwner(){
+    var tagId = (qp('tag')||'').toUpperCase();
+    var note = (document.getElementById('finderNote').value||'').trim();
+    var btn = document.getElementById('notifyBtn'); btn.disabled = true; btn.textContent = "Sending…";
+    if(LIVE && CFG.WEB3FORMS_KEY){   // demo mode shows the confirmation but never sends a real email
+      try{
+        await fetch("https://api.web3forms.com/submit", {method:"POST",
+          headers:{"Content-Type":"application/json", Accept:"application/json"},
+          body:JSON.stringify({access_key:CFG.WEB3FORMS_KEY,
+            subject:"[Pawsenger] Tag "+tagId+" was scanned — a finder is reaching out",
+            from_name:"Pawsenger Tag",
+            message:"Good news — someone scanned the tag for "+tagId+".\n\nFinder note: "+(note||"(none left)")+"\n\nReply to reconnect them with the pet. (Owner contact stays private; routed via Pawsenger.)"})});
+      }catch(e){}
+    }
+    logScan(tagId, note);
+    document.getElementById('notifyMsg').style.display='block';
+    btn.textContent = "✅ Owner notified";
+  }
+
   function makeTag(){
     var name=(document.getElementById('genName').value||'Buddy').trim();
     var desc=(document.getElementById('genDesc').value||'').trim();
     var id = name.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6) + (Math.floor(Math.random()*90)+10);
-    SAMPLE[id]={name:name, emoji:"🐶", desc:desc};  // demo-only, in-memory
+    SAMPLE[id]={pet_name:name, emoji:"🐶", public_note:desc};  // demo-only, in-memory
     var url = location.origin + location.pathname + "?tag=" + id;
     var box=document.getElementById('qr'); box.innerHTML="";
-    new QRCode(box, {text:url, width:140, height:140, colorDark:"#0e8f83"});
-    document.getElementById('genLink').innerHTML = 'Scan it, or open: <a href="'+url+'">'+url+'</a>';
+    try{ new QRCode(box, {text:url, width:140, height:140, colorDark:"#0e8f83"}); }
+    catch(e){ box.textContent = "QR unavailable"; }
+    var a=document.createElement('a'); a.href=url; a.textContent=url;
+    var gl=document.getElementById('genLink'); gl.textContent='Scan it, or open: '; gl.appendChild(a);
   }
-  if(!tag) makeTag();
+
+  function rStatus(m){ document.getElementById('regStatus').textContent = m; }
+  async function registerPet(){
+    var g = function(id){ return (document.getElementById(id).value||'').trim(); };
+    var tag = g('rTag').toUpperCase();
+    if(!tag || !g('rCode') || !g('rName')){ rStatus('Tag ID, claim code and pet name are required.'); return; }
+    if(!LIVE){ rStatus('Live registration activates the moment the data store is connected (anon key). Your form is wired and ready.'); return; }
+    var btn=document.getElementById('regBtn'); btn.disabled=true; btn.textContent='Registering…';
+    try{
+      var r = await fetch(sb("rpc/register_pet"), {method:"POST", headers:sbHeaders(), body:JSON.stringify({
+        p_tag_id:tag, p_claim_code:g('rCode'), p_pet_name:g('rName'), p_public_note:g('rNote'),
+        p_emoji:g('rEmoji')||'🐾', p_owner_name:g('rOwner'), p_owner_email:g('rEmail'), p_owner_phone:g('rPhone')})});
+      var res = await r.json();
+      rStatus(res==='ok' ? '✅ Registered! Scan your tag (or open ?tag='+tag+') to see the live found-page.' :
+              res==='bad_claim_code' ? '❌ That claim code does not match this tag.' :
+              res==='no_such_tag' ? '❌ That tag ID was not found.' : 'Hmm: '+JSON.stringify(res));
+    }catch(e){ rStatus('Network error: '+e.message); }
+    btn.disabled=false; btn.textContent='Register pet';
+  }
+
+  // ---- route ----
+  var tag = qp('tag');
+  if (tag){ initFound(tag); }
+  else { makeTag(); }
 </script>
 </body>
 </html>
